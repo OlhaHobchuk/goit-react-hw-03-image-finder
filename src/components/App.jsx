@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Searchbar } from './Searchbar/Searchbar';
 import { Loader } from './Loader/Loader';
 import { Button } from './Button/Button';
@@ -12,6 +13,7 @@ export class App extends Component {
   state = {
     searchWord: '',
     images: [],
+    totalImages: 0,
     page: 1,
     largeImageURL: '',
     error: null,
@@ -25,7 +27,15 @@ export class App extends Component {
       this.setState({ loading: true });
       fetchImages(searchWord, page)
         .then(images => {
-          console.log(images);
+          const normalizedImages = images.hits.map(
+            ({ id, tags, largeImageURL, webformatURL }) => ({
+              id,
+              tags,
+              largeImageURL,
+              webformatURL,
+            })
+          );
+          console.log(normalizedImages);
           if (images.hits.length === 0) {
             this.setState({
               images: [],
@@ -38,12 +48,13 @@ export class App extends Component {
           }
           if (prevState.searchWord !== searchWord) {
             this.setState({
-              images: [...images.hits],
+              images: [...normalizedImages],
+              totalImages: images.totalHits,
             });
             return;
           }
           this.setState({
-            images: [...prevState.images, ...images.hits],
+            images: [...prevState.images, ...normalizedImages],
           });
         })
         .catch(this.onError)
@@ -63,7 +74,7 @@ export class App extends Component {
     this.setState({ searchWord, page: 1 });
   };
 
-  toggleModal = largeImageURL => {
+  toggleModal = (largeImageURL = '') => {
     this.setState(({ showModal }) => ({
       showModal: !showModal,
       largeImageURL: largeImageURL,
@@ -77,7 +88,8 @@ export class App extends Component {
   }
 
   render() {
-    const { loading, images, showModal, largeImageURL } = this.state;
+    const { loading, images, showModal, largeImageURL, totalImages } =
+      this.state;
     return (
       <div className={css.app}>
         <Searchbar onSubmit={this.handleSubmit} />
@@ -85,7 +97,7 @@ export class App extends Component {
           <>
             <ImageGallery toggleModal={this.toggleModal} images={images} />
             {loading && <Loader />}
-            {images.length > 0 && !loading && (
+            {totalImages !== images.length && !loading && (
               <Button onLoadMore={this.onLoadMore} text="Load more" />
             )}
             {showModal && (
